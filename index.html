@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>かけいぼ — ローカル家計簿</title>
+  <meta name="theme-color" content="#2a78d6">
+  <link rel="manifest" href="manifest.webmanifest">
+  <!-- iOS ホーム画面追加用 -->
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="かけいぼ">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header-top">
+        <h1 class="app-title">かけいぼ</h1>
+        <div class="month-nav">
+          <button type="button" id="prev-month" class="month-btn" aria-label="前の月">◀</button>
+          <span id="current-month" class="month-label"></span>
+          <button type="button" id="next-month" class="month-btn" aria-label="次の月">▶</button>
+        </div>
+      </div>
+      <div class="summary-cards">
+        <div class="summary-card">
+          <span class="summary-label">収入</span>
+          <span class="summary-value" id="summary-income">¥0</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">支出</span>
+          <span class="summary-value" id="summary-expense">¥0</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">収支</span>
+          <span class="summary-value" id="summary-balance">¥0</span>
+        </div>
+      </div>
+      <nav class="tabs" role="tablist">
+        <button type="button" class="tab active" data-tab="entry" role="tab" aria-selected="true">📝 入力</button>
+        <button type="button" class="tab" data-tab="list" role="tab" aria-selected="false">📋 一覧</button>
+        <button type="button" class="tab" data-tab="charts" role="tab" aria-selected="false">📊 グラフ</button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- 入力タブ -->
+      <section id="panel-entry" class="panel active" role="tabpanel">
+        <form id="entry-form" novalidate>
+          <div class="type-segment" role="radiogroup" aria-label="収支の種別">
+            <label class="segment-option">
+              <input type="radio" name="type" value="expense" checked>
+              <span>支出</span>
+            </label>
+            <label class="segment-option">
+              <input type="radio" name="type" value="income">
+              <span>収入</span>
+            </label>
+          </div>
+
+          <div class="field">
+            <label for="entry-date">日付</label>
+            <input type="date" id="entry-date" required>
+          </div>
+
+          <div class="field">
+            <label for="entry-amount">金額(円)</label>
+            <input type="number" id="entry-amount" min="1" step="1" inputmode="numeric"
+                   placeholder="1280" required>
+          </div>
+
+          <div class="field">
+            <label for="entry-category">カテゴリ</label>
+            <select id="entry-category" required></select>
+          </div>
+
+          <div class="field">
+            <label for="entry-method">支払い方法(何から使ったか)</label>
+            <select id="entry-method" required></select>
+          </div>
+
+          <div class="field">
+            <label for="entry-memo">名目・メモ</label>
+            <input type="text" id="entry-memo" maxlength="100" placeholder="スーパーで食材">
+          </div>
+
+          <p id="entry-error" class="form-error" role="alert" hidden></p>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary" id="entry-submit">追加する</button>
+            <button type="button" class="btn-secondary" id="entry-cancel" hidden>編集をやめる</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- 一覧タブ -->
+      <section id="panel-list" class="panel" role="tabpanel" hidden>
+        <div class="filter-bar">
+          <select id="filter-category" aria-label="カテゴリで絞り込み"></select>
+          <select id="filter-method" aria-label="支払い方法で絞り込み"></select>
+          <input type="search" id="filter-keyword" placeholder="名目で検索" aria-label="名目で検索">
+        </div>
+        <div id="tx-list" class="tx-list"></div>
+        <div class="io-bar">
+          <button type="button" id="export-csv" class="btn-secondary">CSV エクスポート</button>
+          <button type="button" id="export-json" class="btn-secondary">JSON エクスポート</button>
+          <label class="btn-secondary import-label">
+            インポート
+            <input type="file" id="import-file" accept=".csv,.json,text/csv,application/json" hidden>
+          </label>
+        </div>
+        <p class="io-note">エクスポート/インポートは全期間の明細が対象です。インポートは既存データに追記され、同じIDの明細はスキップされます。</p>
+      </section>
+
+      <!-- グラフタブ -->
+      <section id="panel-charts" class="panel" role="tabpanel" hidden>
+        <div class="chart-card">
+          <h2 class="chart-title">月次推移(直近6ヶ月)</h2>
+          <div id="chart-trend"></div>
+        </div>
+        <div class="chart-card">
+          <h2 class="chart-title">支出カテゴリ内訳</h2>
+          <div id="chart-category"></div>
+        </div>
+        <div class="chart-card">
+          <h2 class="chart-title">支払い方法別の支出</h2>
+          <div id="chart-method"></div>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" hidden></div>
+  </div>
+
+  <script src="js/store.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
