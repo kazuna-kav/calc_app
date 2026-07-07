@@ -88,6 +88,14 @@ const Store = {
     return tx;
   },
 
+  update(id, { type, date, amount, category, method, memo }) {
+    const tx = this.transactions.find((t) => t.id === id);
+    if (!tx) return null;
+    Object.assign(tx, { type, date, amount: Math.round(amount), category, method, memo: memo || "" });
+    this.persist();
+    return tx;
+  },
+
   remove(id) {
     this.transactions = this.transactions.filter((t) => t.id !== id);
     this.persist();
@@ -152,6 +160,129 @@ const Store = {
     return { income, expense, balance: income - expense };
   },
 };
+
+/* ---------- エクスポート / インポート ---------- */
+
+const CSV_HEADER = ["id", "type", "date", "amount", "category", "method", "memo", "createdAt"];
+
+Object.assign(Store, {
+  /** 全明細を JSON 文字列で返す(バックアップ用) */
+  exportJSON() {
+    return JSON.stringify(
+      { schemaVersion: SCHEMA_VERSION, transactions: this.transactions },
+      null,
+      2
+    );
+  },
+
+  /** 全明細を CSV 文字列で返す(Excel 等での閲覧用・BOM付きで文字化け防止) */
+  exportCSV() {
+    const escape = (v) => {
+      const s = String(v ?? "");
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const lines = [CSV_HEADER.join(",")];
+    const sorted = [...this.transactions].sort((a, b) => (a.date < b.date ? -1 : 1));
+    for (const t of sorted) {
+      lines.push(CSV_HEADER.map((k) => escape(t[k])).join(","));
+    }
+    return "\uFEFF" + lines.join("\r\n");
+  },
+
+  /**
+   * JSON / CSV テキストを取り込む。既存と同じ id はスキップ。
+   * @returns {{added:number, skipped:number}}
+   */
+  importText(text) {
+    const trimmed = text.replace(/^\uFEFF/, "").trim();
+    const rows = trimmed.startsWith("{") || trimmed.startsWith("[")
+      ? parseImportJSON(trimmed)
+      : parseImportCSV(trimmed);
+
+    const existingIds = new Set(this.transactions.map((t) => t.id));
+    let added = 0;
+    let skipped = 0;
+    for (const row of rows) {
+      const tx = normalizeImportedRow(row);
+      if (!tx || existingIds.has(tx.id)) {
+        skipped++;
+        continue;
+      }
+      existingIds.add(tx.id);
+      this.transactions.push(tx);
+      added++;
+    }
+    if (added > 0) this.persist();
+    return { added, skipped };
+  },
+});
+
+function parseImportJSON(text) {
+  const data = JSON.parse(text);
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.transactions)) return data.transactions;
+  throw new Error("transactions 配列が見つかりません");
+}
+
+function parseImportCSV(text) {
+  const records = parseCSV(text);
+  if (records.length < 2) return [];
+  const header = records[0].map((h) => h.trim());
+  return records.slice(1).map((fields) => {
+    const row = {};
+    header.forEach((key, i) => { row[key] = fields[i]; });
+    if (row.amount !== undefined) row.amount = Number(row.amount);
+    return row;
+  });
+}
+
+/** ダブルクォート対応の素朴な CSV パーサ */
+function parseCSV(text) {
+  const records = [];
+  let field = "";
+  let record = [];
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += ch;
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ",") {
+      record.push(field); field = "";
+    } else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && text[i + 1] === "\n") i++;
+      record.push(field); field = "";
+      records.push(record); record = [];
+    } else {
+      field += ch;
+    }
+  }
+  if (field !== "" || record.length > 0) {
+    record.push(field);
+    records.push(record);
+  }
+  return records.filter((r) => r.length > 1 || (r.length === 1 && r[0] !== ""));
+}
+
+/** 取り込んだ行を Transaction に正規化。不正なら null */
+function normalizeImportedRow(row) {
+  if (!row || typeof row !== "object") return null;
+  const tx = {
+    id: typeof row.id === "string" && row.id ? row.id : `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    type: row.type,
+    date: row.date,
+    amount: Number(row.amount),
+    category: row.category,
+    method: row.method,
+    memo: typeof row.memo === "string" ? row.memo : "",
+    createdAt: typeof row.createdAt === "string" && row.createdAt ? row.createdAt : new Date().toISOString(),
+  };
+  return isValidTransaction(tx) ? tx : null;
+}
 
 function isValidTransaction(t) {
   return (

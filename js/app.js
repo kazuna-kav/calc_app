@@ -9,6 +9,12 @@ function formatYen(n) {
 /** 表示中の月 ("YYYY-MM") */
 let currentMonth = toMonthString(new Date());
 
+/** 編集中の明細ID(null なら新規追加モード) */
+let editingId = null;
+
+/** 一覧の絞り込み条件 */
+const filter = { category: "", method: "", keyword: "" };
+
 function toMonthString(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
@@ -30,18 +36,19 @@ function todayString() {
 }
 
 /* ---------- タブ ---------- */
+function switchTab(name) {
+  document.querySelectorAll(".tab").forEach((t) => {
+    const active = t.dataset.tab === name;
+    t.classList.toggle("active", active);
+    t.setAttribute("aria-selected", String(active));
+    document.getElementById(`panel-${t.dataset.tab}`).hidden = !active;
+  });
+  render();
+}
+
 function setupTabs() {
-  const tabs = document.querySelectorAll(".tab");
-  tabs.forEach((tab) => {
-    tab.addEventListener("click", () => {
-      tabs.forEach((t) => {
-        const active = t === tab;
-        t.classList.toggle("active", active);
-        t.setAttribute("aria-selected", String(active));
-        document.getElementById(`panel-${t.dataset.tab}`).hidden = !active;
-      });
-      render();
-    });
+  document.querySelectorAll(".tab").forEach((tab) => {
+    tab.addEventListener("click", () => switchTab(tab.dataset.tab));
   });
 }
 
@@ -75,15 +82,53 @@ function setupForm() {
     }
     errorEl.hidden = true;
 
-    Store.add({ type, date, amount, category, method, memo });
+    if (editingId) {
+      Store.update(editingId, { type, date, amount, category, method, memo });
+      showToast("明細を更新しました");
+      exitEditMode();
+      switchTab("list");
+    } else {
+      Store.add({ type, date, amount, category, method, memo });
+      showToast(`${type === "income" ? "収入" : "支出"} ${formatYen(amount)} を記録しました`);
+      document.getElementById("entry-amount").value = "";
+      document.getElementById("entry-memo").value = "";
+    }
 
     // 入力した明細の月を表示して結果が見えるようにする
     currentMonth = date.slice(0, 7);
-    document.getElementById("entry-amount").value = "";
-    document.getElementById("entry-memo").value = "";
-    showToast(`${type === "income" ? "収入" : "支出"} ${formatYen(amount)} を記録しました`);
     render();
   });
+
+  document.getElementById("entry-cancel").addEventListener("click", () => {
+    exitEditMode();
+    switchTab("list");
+  });
+}
+
+/* ---------- 編集モード ---------- */
+function enterEditMode(tx) {
+  editingId = tx.id;
+  const form = document.getElementById("entry-form");
+  form.querySelector(`input[name="type"][value="${tx.type}"]`).checked = true;
+  fillCategoryOptions(tx.type);
+  document.getElementById("entry-date").value = tx.date;
+  document.getElementById("entry-amount").value = tx.amount;
+  document.getElementById("entry-category").value = tx.category;
+  document.getElementById("entry-method").value = tx.method;
+  document.getElementById("entry-memo").value = tx.memo;
+  document.getElementById("entry-submit").textContent = "更新する";
+  document.getElementById("entry-cancel").hidden = false;
+  switchTab("entry");
+}
+
+function exitEditMode() {
+  editingId = null;
+  const form = document.getElementById("entry-form");
+  form.reset();
+  document.getElementById("entry-date").value = todayString();
+  fillCategoryOptions("expense");
+  document.getElementById("entry-submit").textContent = "追加する";
+  document.getElementById("entry-cancel").hidden = true;
 }
 
 function validateEntry({ date, amount }) {
@@ -114,6 +159,89 @@ function fillMethodOptions() {
     opt.textContent = m.label;
     select.appendChild(opt);
   }
+}
+
+/* ---------- 一覧の絞り込み ---------- */
+function setupFilters() {
+  const categorySelect = document.getElementById("filter-category");
+  categorySelect.textContent = "";
+  categorySelect.appendChild(buildOption("", "カテゴリ: すべて"));
+  const expenseGroup = document.createElement("optgroup");
+  expenseGroup.label = "支出";
+  for (const c of EXPENSE_CATEGORIES) expenseGroup.appendChild(buildOption(`expense:${c.id}`, c.label));
+  const incomeGroup = document.createElement("optgroup");
+  incomeGroup.label = "収入";
+  for (const c of INCOME_CATEGORIES) incomeGroup.appendChild(buildOption(`income:${c.id}`, c.label));
+  categorySelect.append(expenseGroup, incomeGroup);
+
+  const methodSelect = document.getElementById("filter-method");
+  methodSelect.textContent = "";
+  methodSelect.appendChild(buildOption("", "支払い方法: すべて"));
+  for (const m of METHODS) methodSelect.appendChild(buildOption(m.id, m.label));
+
+  categorySelect.addEventListener("change", () => {
+    filter.category = categorySelect.value;
+    renderList();
+  });
+  methodSelect.addEventListener("change", () => {
+    filter.method = methodSelect.value;
+    renderList();
+  });
+  document.getElementById("filter-keyword").addEventListener("input", (e) => {
+    filter.keyword = e.target.value.trim();
+    renderList();
+  });
+}
+
+function buildOption(value, label) {
+  const opt = document.createElement("option");
+  opt.value = value;
+  opt.textContent = label;
+  return opt;
+}
+
+function applyFilter(txs) {
+  return txs.filter((t) => {
+    if (filter.category && `${t.type}:${t.category}` !== filter.category) return false;
+    if (filter.method && t.method !== filter.method) return false;
+    if (filter.keyword && !t.memo.toLowerCase().includes(filter.keyword.toLowerCase())) return false;
+    return true;
+  });
+}
+
+/* ---------- エクスポート / インポート ---------- */
+function setupImportExport() {
+  document.getElementById("export-csv").addEventListener("click", () => {
+    downloadFile(`kakeibo_${todayString()}.csv`, Store.exportCSV(), "text/csv");
+  });
+  document.getElementById("export-json").addEventListener("click", () => {
+    downloadFile(`kakeibo_${todayString()}.json`, Store.exportJSON(), "application/json");
+  });
+  document.getElementById("import-file").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const { added, skipped } = Store.importText(text);
+      showToast(`${added}件を取り込みました${skipped > 0 ? `(${skipped}件スキップ)` : ""}`);
+      render();
+    } catch (err) {
+      console.error(err);
+      showToast("インポートに失敗しました: 形式を確認してください");
+    } finally {
+      e.target.value = "";
+    }
+  });
+}
+
+function downloadFile(filename, content, mime) {
+  const blob = new Blob([content], { type: `${mime};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 /* ---------- 月ナビゲーション ---------- */
@@ -164,12 +292,15 @@ function renderSummary() {
 function renderList() {
   const container = document.getElementById("tx-list");
   container.textContent = "";
-  const txs = Store.byMonth(currentMonth);
+  const all = Store.byMonth(currentMonth);
+  const txs = applyFilter(all);
 
   if (txs.length === 0) {
     const p = document.createElement("p");
     p.className = "empty-state";
-    p.textContent = "この月の記録はまだありません";
+    p.textContent = all.length === 0
+      ? "この月の記録はまだありません"
+      : "絞り込み条件に一致する記録がありません";
     container.appendChild(p);
     return;
   }
@@ -212,6 +343,14 @@ function buildTxRow(tx) {
   const actions = document.createElement("div");
   actions.className = "tx-actions";
 
+  const editBtn = document.createElement("button");
+  editBtn.type = "button";
+  editBtn.className = "icon-btn";
+  editBtn.textContent = "✏️";
+  editBtn.setAttribute("aria-label", "編集");
+  editBtn.addEventListener("click", () => enterEditMode(tx));
+  actions.appendChild(editBtn);
+
   const delBtn = document.createElement("button");
   delBtn.type = "button";
   delBtn.className = "icon-btn";
@@ -245,5 +384,7 @@ function showToast(message) {
 Store.load();
 setupTabs();
 setupForm();
+setupFilters();
+setupImportExport();
 setupMonthNav();
 render();

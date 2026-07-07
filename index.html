@@ -80,13 +80,30 @@
           </div>
 
           <p id="entry-error" class="form-error" role="alert" hidden></p>
-          <button type="submit" class="btn-primary">追加する</button>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary" id="entry-submit">追加する</button>
+            <button type="button" class="btn-secondary" id="entry-cancel" hidden>編集をやめる</button>
+          </div>
         </form>
       </section>
 
       <!-- 一覧タブ -->
       <section id="panel-list" class="panel" role="tabpanel" hidden>
+        <div class="filter-bar">
+          <select id="filter-category" aria-label="カテゴリで絞り込み"></select>
+          <select id="filter-method" aria-label="支払い方法で絞り込み"></select>
+          <input type="search" id="filter-keyword" placeholder="名目で検索" aria-label="名目で検索">
+        </div>
         <div id="tx-list" class="tx-list"></div>
+        <div class="io-bar">
+          <button type="button" id="export-csv" class="btn-secondary">CSV エクスポート</button>
+          <button type="button" id="export-json" class="btn-secondary">JSON エクスポート</button>
+          <label class="btn-secondary import-label">
+            インポート
+            <input type="file" id="import-file" accept=".csv,.json,text/csv,application/json" hidden>
+          </label>
+        </div>
+        <p class="io-note">エクスポート/インポートは全期間の明細が対象です。インポートは既存データに追記され、同じIDの明細はスキップされます。</p>
       </section>
 
       <!-- グラフタブ -->
