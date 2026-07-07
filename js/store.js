@@ -100,6 +100,46 @@ const Store = {
       .sort((a, b) => (a.date === b.date ? (a.createdAt < b.createdAt ? 1 : -1) : a.date < b.date ? 1 : -1));
   },
 
+  /** endMonth を含む直近 n ヶ月の月別合計を古い順で返す */
+  monthlyTotals(n, endMonth) {
+    const [y, m] = endMonth.split("-").map(Number);
+    const months = [];
+    for (let i = n - 1; i >= 0; i--) {
+      const d = new Date(y, m - 1 - i, 1);
+      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+    }
+    const map = new Map(months.map((mo) => [mo, { month: mo, income: 0, expense: 0 }]));
+    for (const t of this.transactions) {
+      const entry = map.get(t.date.slice(0, 7));
+      if (!entry) continue;
+      if (t.type === "income") entry.income += t.amount;
+      else entry.expense += t.amount;
+    }
+    return months.map((mo) => map.get(mo));
+  },
+
+  /** 指定月の支出をカテゴリ別に集計し降順で返す */
+  expenseByCategory(month) {
+    return this._expenseGroupBy(month, (t) => t.category, (id) => categoryLabel("expense", id));
+  },
+
+  /** 指定月の支出を支払い方法別に集計し降順で返す */
+  expenseByMethod(month) {
+    return this._expenseGroupBy(month, (t) => t.method, (id) => methodLabel(id));
+  },
+
+  _expenseGroupBy(month, keyFn, labelFn) {
+    const totals = new Map();
+    for (const t of this.transactions) {
+      if (t.type !== "expense" || !t.date.startsWith(month)) continue;
+      const key = keyFn(t);
+      totals.set(key, (totals.get(key) || 0) + t.amount);
+    }
+    return [...totals.entries()]
+      .map(([id, total]) => ({ id, label: labelFn(id), total }))
+      .sort((a, b) => b.total - a.total);
+  },
+
   /** 指定月の { income, expense, balance } を返す */
   summary(month) {
     let income = 0;

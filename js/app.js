@@ -133,6 +133,22 @@ function render() {
   document.getElementById("current-month").textContent = monthLabel(currentMonth);
   renderSummary();
   renderList();
+  renderCharts();
+}
+
+function renderCharts() {
+  if (document.getElementById("panel-charts").hidden) return;
+  renderTrendChart(document.getElementById("chart-trend"), Store.monthlyTotals(6, currentMonth));
+  renderBreakdownChart(
+    document.getElementById("chart-category"),
+    Store.expenseByCategory(currentMonth),
+    "この月の支出データがありません"
+  );
+  renderBreakdownChart(
+    document.getElementById("chart-method"),
+    Store.expenseByMethod(currentMonth),
+    "この月の支出データがありません"
+  );
 }
 
 function renderSummary() {

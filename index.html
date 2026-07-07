@@ -91,7 +91,18 @@
 
       <!-- グラフタブ -->
       <section id="panel-charts" class="panel" role="tabpanel" hidden>
-        <p class="placeholder">グラフ機能は v0.2 で追加予定です。</p>
+        <div class="chart-card">
+          <h2 class="chart-title">月次推移(直近6ヶ月)</h2>
+          <div id="chart-trend"></div>
+        </div>
+        <div class="chart-card">
+          <h2 class="chart-title">支出カテゴリ内訳</h2>
+          <div id="chart-category"></div>
+        </div>
+        <div class="chart-card">
+          <h2 class="chart-title">支払い方法別の支出</h2>
+          <div id="chart-method"></div>
+        </div>
       </section>
     </main>
 
@@ -99,6 +110,7 @@
   </div>
 
   <script src="js/store.js"></script>
+  <script src="js/charts.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
