@@ -131,10 +131,13 @@ function exitEditMode() {
   document.getElementById("entry-cancel").hidden = true;
 }
 
+const MAX_AMOUNT = 100000000; // 1億円。桁の打ち間違い対策
+
 function validateEntry({ date, amount }) {
-  if (!date) return "日付を入力してください";
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return "日付を入力してください";
   if (!Number.isFinite(amount) || amount <= 0) return "金額は1円以上の数値で入力してください";
   if (!Number.isInteger(amount)) return "金額は整数(円)で入力してください";
+  if (amount > MAX_AMOUNT) return `金額が大きすぎます(上限 ${formatYen(MAX_AMOUNT)})`;
   return null;
 }
 
@@ -388,3 +391,6 @@ setupFilters();
 setupImportExport();
 setupMonthNav();
 render();
+
+// OSのテーマが切り替わったらグラフを描き直す(グラフ色はCSS変数から都度取得)
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);

@@ -236,7 +236,7 @@ function renderBreakdownChart(container, data, emptyMessage) {
   const rowH = 34;
   const barH = 20; // ≤24px
   const W = 640;
-  const pad = { top: 4, right: 96, bottom: 4, left: 110 };
+  const pad = { top: 4, right: 100, bottom: 4, left: 130 };
   const H = pad.top + rowH * data.length + pad.bottom;
   const plotW = W - pad.left - pad.right;
 

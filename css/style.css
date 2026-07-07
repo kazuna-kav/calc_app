@@ -10,8 +10,28 @@
   --accent: #2a78d6;
   --income: #2a78d6;
   --expense: #e34948;
+  --positive: #006300;
   --danger: #d03b3b;
   --radius: 10px;
+  color-scheme: light dark;
+}
+
+/* ダークモード: 同じ色相をダーク面向けの明度に調整したパレット(検証済み) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface-1: #1a1a19;
+    --page: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --hairline: #2c2c2a;
+    --border: rgba(255, 255, 255, 0.10);
+    --accent: #3987e5;
+    --income: #3987e5;
+    --expense: #e66767;
+    --positive: #0ca30c;
+    --danger: #e66767;
+  }
 }
 
 * { box-sizing: border-box; }
@@ -91,7 +111,7 @@ body {
   font-size: 18px;
   font-weight: 600;
 }
-.summary-value.positive { color: #006300; }
+.summary-value.positive { color: var(--positive); }
 .summary-value.negative { color: var(--danger); }
 
 /* ---------- タブ ---------- */
@@ -306,7 +326,7 @@ body {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.tx-amount.income { color: #006300; }
+.tx-amount.income { color: var(--positive); }
 
 .tx-actions { display: flex; gap: 4px; }
 
@@ -359,20 +379,20 @@ body {
 
 .chart-tick {
   fill: var(--text-muted);
-  font-size: 11px;
+  font-size: 12px;
   font-family: inherit;
   font-variant-numeric: tabular-nums;
 }
 
 .chart-label {
   fill: var(--text-secondary);
-  font-size: 12px;
+  font-size: 14px;
   font-family: inherit;
 }
 
 .chart-value {
   fill: var(--text-primary);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   font-family: inherit;
   font-variant-numeric: tabular-nums;
@@ -462,3 +482,22 @@ body {
   pointer-events: none;
 }
 .toast.show { opacity: 0.92; }
+
+/* ---------- レスポンシブ(スマホ) ---------- */
+@media (max-width: 480px) {
+  .app { padding: 10px; }
+
+  .header-top {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .summary-value { font-size: 15px; }
+  .summary-card { padding: 8px 10px; }
+
+  .tab { font-size: 13px; }
+
+  .filter-bar select { flex: 1; min-width: 0; }
+
+  .io-bar { flex-direction: column; }
+}
