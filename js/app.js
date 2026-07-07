@@ -383,6 +383,54 @@ function showToast(message) {
   toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
 }
 
+/* ---------- クイック入力URL(ショートカット連携用) ----------
+ * 例: index.html?add=1&amount=500&category=food&method=paypay&memo=カフェ
+ * - amount があればその場で登録してトースト表示
+ * - amount がなければフォームに事前入力するだけ(金額だけ打てば登録できる状態)
+ * 処理後はクエリを消して、リロードによる二重登録を防ぐ */
+function handleQuickAdd() {
+  const params = new URLSearchParams(location.search);
+  if (!params.has("add")) return;
+
+  const type = params.get("type") === "income" ? "income" : "expense";
+  const categories = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const fallbackCategory = type === "income" ? "other_income" : "other";
+  const category = categories.some((c) => c.id === params.get("category"))
+    ? params.get("category") : fallbackCategory;
+  const method = METHODS.some((m) => m.id === params.get("method"))
+    ? params.get("method") : "other";
+  const memo = (params.get("memo") || "").slice(0, 100);
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(params.get("date") || "") ? params.get("date") : todayString();
+  const amount = Number(params.get("amount"));
+
+  history.replaceState(null, "", location.pathname);
+
+  if (params.has("amount") && !validateEntry({ date, amount })) {
+    Store.add({ type, date, amount, category, method, memo });
+    currentMonth = date.slice(0, 7);
+    showToast(`クイック入力: ${memo || categoryLabel(type, category)} ${formatYen(amount)}`);
+    return;
+  }
+
+  // 金額なし(または不正)→ フォーム事前入力モード
+  document.querySelector(`input[name="type"][value="${type}"]`).checked = true;
+  fillCategoryOptions(type);
+  document.getElementById("entry-date").value = date;
+  document.getElementById("entry-category").value = category;
+  document.getElementById("entry-method").value = method;
+  document.getElementById("entry-memo").value = memo;
+  document.getElementById("entry-amount").focus();
+}
+
+/* ---------- Service Worker(オフライン起動用・http(s)配信時のみ) ---------- */
+function registerServiceWorker() {
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    navigator.serviceWorker.register("./sw.js").catch((e) => {
+      console.warn("Service Worker の登録に失敗しました", e);
+    });
+  }
+}
+
 /* ---------- 起動 ---------- */
 Store.load();
 setupTabs();
@@ -390,6 +438,8 @@ setupForm();
 setupFilters();
 setupImportExport();
 setupMonthNav();
+handleQuickAdd();
+registerServiceWorker();
 render();
 
 // OSのテーマが切り替わったらグラフを描き直す(グラフ色はCSS変数から都度取得)

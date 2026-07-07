@@ -21,6 +21,15 @@ cd calc_app
 - グラフ表示(月次推移・支出カテゴリ内訳・支払い方法別支出)— SVG 自前描画・ツールチップ付き
 - CSV / JSON エクスポート & インポート(バックアップ・乗り換え自由)
 - ダークモード(OS設定に追従)・スマホ対応
+- **PWA対応**: iPhone/Android のホーム画面にアプリとして追加でき、オフラインでも起動
+- **クイック入力URL**: `?add=1&amount=500&category=food&method=paypay` で即記録。
+  iOS ショートカットと組み合わせてホーム画面・ロック画面・ウィジェットから2タップ入力
+
+## iPhone で使う
+
+HTTPS で配信(GitHub Pages 等)→ Safari で開く → 「ホーム画面に追加」。
+ショートカット連携によるウィジェット風クイック入力の作り方も含め、
+手順は [docs/04_ios_pwa.md](docs/04_ios_pwa.md) を参照。
 
 ## ドキュメント
 
@@ -28,4 +37,5 @@ cd calc_app
 |---|---|
 | [docs/01_requirements.md](docs/01_requirements.md) | 要件定義(草案) |
 | [docs/02_design.md](docs/02_design.md) | 設計書(アーキテクチャ図・データモデル・画面設計) |
-| [docs/03_brushup_log.md](docs/03_brushup_log.md) | ブラッシュアップログ(v0.1→v0.4 の改善記録) |
+| [docs/03_brushup_log.md](docs/03_brushup_log.md) | ブラッシュアップログ(v0.1→ の改善記録) |
+| [docs/04_ios_pwa.md](docs/04_ios_pwa.md) | iPhone セットアップ(PWA化・ショートカット連携) |
