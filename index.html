@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>かけいぼ — ローカル家計簿</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="header-top">
+        <h1 class="app-title">かけいぼ</h1>
+        <div class="month-nav">
+          <button type="button" id="prev-month" class="month-btn" aria-label="前の月">◀</button>
+          <span id="current-month" class="month-label"></span>
+          <button type="button" id="next-month" class="month-btn" aria-label="次の月">▶</button>
+        </div>
+      </div>
+      <div class="summary-cards">
+        <div class="summary-card">
+          <span class="summary-label">収入</span>
+          <span class="summary-value" id="summary-income">¥0</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">支出</span>
+          <span class="summary-value" id="summary-expense">¥0</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">収支</span>
+          <span class="summary-value" id="summary-balance">¥0</span>
+        </div>
+      </div>
+      <nav class="tabs" role="tablist">
+        <button type="button" class="tab active" data-tab="entry" role="tab" aria-selected="true">📝 入力</button>
+        <button type="button" class="tab" data-tab="list" role="tab" aria-selected="false">📋 一覧</button>
+        <button type="button" class="tab" data-tab="charts" role="tab" aria-selected="false">📊 グラフ</button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- 入力タブ -->
+      <section id="panel-entry" class="panel active" role="tabpanel">
+        <form id="entry-form" novalidate>
+          <div class="type-segment" role="radiogroup" aria-label="収支の種別">
+            <label class="segment-option">
+              <input type="radio" name="type" value="expense" checked>
+              <span>支出</span>
+            </label>
+            <label class="segment-option">
+              <input type="radio" name="type" value="income">
+              <span>収入</span>
+            </label>
+          </div>
+
+          <div class="field">
+            <label for="entry-date">日付</label>
+            <input type="date" id="entry-date" required>
+          </div>
+
+          <div class="field">
+            <label for="entry-amount">金額(円)</label>
+            <input type="number" id="entry-amount" min="1" step="1" inputmode="numeric"
+                   placeholder="1280" required>
+          </div>
+
+          <div class="field">
+            <label for="entry-category">カテゴリ</label>
+            <select id="entry-category" required></select>
+          </div>
+
+          <div class="field">
+            <label for="entry-method">支払い方法(何から使ったか)</label>
+            <select id="entry-method" required></select>
+          </div>
+
+          <div class="field">
+            <label for="entry-memo">名目・メモ</label>
+            <input type="text" id="entry-memo" maxlength="100" placeholder="スーパーで食材">
+          </div>
+
+          <p id="entry-error" class="form-error" role="alert" hidden></p>
+          <button type="submit" class="btn-primary">追加する</button>
+        </form>
+      </section>
+
+      <!-- 一覧タブ -->
+      <section id="panel-list" class="panel" role="tabpanel" hidden>
+        <div id="tx-list" class="tx-list"></div>
+      </section>
+
+      <!-- グラフタブ -->
+      <section id="panel-charts" class="panel" role="tabpanel" hidden>
+        <p class="placeholder">グラフ機能は v0.2 で追加予定です。</p>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" hidden></div>
+  </div>
+
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
